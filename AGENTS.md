@@ -76,7 +76,7 @@ dist/                 # Compiled output (committed to repo)
 
 **Authentication:** At least one auth method is required:
 - **API Key only** (`BLOGGER_API_KEY`): read-only access to public blogs. Works for `get_blog`,
-  `list_posts`, `get_post`, `search_posts`, `list_labels`, `get_label`.
+  `get_blog_by_url`, `list_posts`, `get_post`, `search_posts`, `list_labels`, `get_label`.
 - **OAuth2** (`GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` + `GOOGLE_REFRESH_TOKEN`): full access.
   Required for `list_blogs`, `create_post`, `update_post`, `delete_post`.
 - If both are set, OAuth2 is used (it covers all operations).
@@ -104,7 +104,7 @@ dist/                 # Compiled output (committed to repo)
 | Type aliases | PascalCase | `ServerMode` |
 | Functions | camelCase | `initMCPServer`, `listBlogs` |
 | Variables/properties | camelCase | `bloggerService`, `serverMode` |
-| MCP tool names | snake_case | `list_blogs`, `get_blog`, `create_post` |
+| MCP tool names | snake_case | `list_blogs`, `get_blog`, `get_blog_by_url`, `create_post` |
 | Environment vars | UPPER_SNAKE_CASE | `BLOGGER_API_KEY`, `MCP_MODE` |
 | Files | camelCase or kebab-case | `bloggerService.ts`, `ui-manager.ts` |
 

@@ -8,6 +8,7 @@
 // Mock googleapis before importing anything
 const mockBlogsListByUser = jest.fn();
 const mockBlogsGet = jest.fn();
+const mockBlogsGetByUrl = jest.fn();
 const mockPostsList = jest.fn();
 const mockPostsSearch = jest.fn();
 const mockPostsGet = jest.fn();
@@ -26,7 +27,8 @@ jest.mock('googleapis', () => ({
     blogger: jest.fn(() => ({
       blogs: {
         listByUser: mockBlogsListByUser,
-        get: mockBlogsGet
+        get: mockBlogsGet,
+        getByUrl: mockBlogsGetByUrl
       },
       posts: {
         list: mockPostsList,
@@ -186,6 +188,22 @@ describe('read operations', () => {
     it('should propagate API errors', async () => {
       mockBlogsGet.mockRejectedValue(new Error('API error'));
       await expect(service.getBlog('bad')).rejects.toThrow('API error');
+    });
+  });
+
+  describe('getBlogByUrl', () => {
+    it('should call blogs.getByUrl with the URL and return data', async () => {
+      const mockBlog = { id: '123', name: 'Test Blog', url: 'https://test.blogspot.com' };
+      mockBlogsGetByUrl.mockResolvedValue({ data: mockBlog });
+
+      const result = await service.getBlogByUrl('https://test.blogspot.com');
+      expect(mockBlogsGetByUrl).toHaveBeenCalledWith({ url: 'https://test.blogspot.com' });
+      expect(result).toEqual(mockBlog);
+    });
+
+    it('should propagate API errors', async () => {
+      mockBlogsGetByUrl.mockRejectedValue(new Error('Not found'));
+      await expect(service.getBlogByUrl('https://bad-url.com')).rejects.toThrow('Not found');
     });
   });
 

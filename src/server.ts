@@ -71,6 +71,37 @@ export function createToolDefinitions(bloggerService: BloggerService): ToolDefin
       }
     },
     {
+      name: 'get_blog_by_url',
+      description: 'Retrieves a blog by its URL (useful for discovering blog ID)',
+      args: z.object({
+        url: z.string().describe('Blog URL')
+      }),
+      handler: async (args, _extra) => {
+        try {
+          const blog = await bloggerService.getBlogByUrl(args.url);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({ blog }, null, 2)
+              }
+            ]
+          };
+        } catch (error) {
+          console.error(`Error fetching blog by URL ${args.url}:`, error);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Error fetching blog by URL: ${error}`
+              }
+            ],
+            isError: true
+          };
+        }
+      }
+    },
+    {
       name: 'create_blog',
       description: 'Creates a new blog (not supported by the Blogger API)',
       args: z.object({

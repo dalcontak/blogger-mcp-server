@@ -113,6 +113,23 @@ export class BloggerService {
   }
 
   /**
+   * Retrieves a blog by its URL
+   * @param url Blog URL
+   * @returns Blog details
+   */
+  async getBlogByUrl(url: string): Promise<blogger_v3.Schema$Blog> {
+    try {
+      const response = await this.blogger.blogs.getByUrl({
+        url
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching blog by URL ${url}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Simulates blog creation.
    * Note: The Blogger API does not actually allow creating a blog via API.
    * This method simulates the functionality and returns an explanatory error message.
