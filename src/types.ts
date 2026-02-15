@@ -1,6 +1,16 @@
+import { z } from 'zod';
+
 /**
  * Types used in the MCP server for Blogger
  */
+
+// Tool definition type
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  args: z.ZodType<any>;
+  handler: (args: any, extra?: any) => Promise<any>;
+}
 
 // Blog type
 export interface BloggerBlog {

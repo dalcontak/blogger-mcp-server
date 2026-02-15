@@ -1,6 +1,6 @@
 import { config } from './config';
 import { BloggerService } from './bloggerService';
-import { initMCPServer } from './server';
+import { initMCPServer, createToolDefinitions } from './server';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Server as HttpServer } from 'http';
 import { ServerMode, ServerStatus, ClientConnection, ServerStats } from './types';
@@ -50,6 +50,11 @@ async function main() {
     // Initialize the MCP server with all tools
     const server = initMCPServer(bloggerService, serverConfig);
     
+    // Get tool definitions for direct access in HTTP mode and stats
+    const toolDefinitions = createToolDefinitions(bloggerService);
+    const toolMap = new Map(toolDefinitions.map(t => [t.name, t]));
+    const serverTools = toolDefinitions.map(t => t.name);
+
     // Initialize the UI manager
     const uiManager = new WebUIManager();
     
@@ -58,13 +63,7 @@ async function main() {
     await uiManager.start(uiPort);
     
     // Initialize server statistics and status
-    const serverTools = [
-      'list_blogs', 'get_blog', 'create_blog', 'list_posts', 
-      'search_posts', 'get_post', 'create_post', 'update_post', 
-      'delete_post', 'list_labels', 'get_label'
-    ];
-    
-    const serverStatus: ServerStatus = {
+    let serverStatus: ServerStatus = {
       running: true,
       mode: serverMode.type,
       startTime: new Date(),
@@ -87,11 +86,13 @@ async function main() {
     uiManager.updateStats(serverStats);
     
     // Configure the appropriate transport based on the mode
+    let httpServer: HttpServer | undefined;
+
     if (serverMode.type === 'http') {
       // For HTTP mode, we use Node.js HTTP server directly
       // since the official MCP SDK does not have an HttpServerTransport equivalent
       const httpMode = serverMode;
-      const httpServer = new HttpServer((req, res) => {
+      httpServer = new HttpServer((req, res) => {
         if (req.method === 'OPTIONS') {
           res.writeHead(200, {
             'Access-Control-Allow-Origin': '*',
@@ -109,11 +110,23 @@ async function main() {
         }
         
         let body = '';
+        let bodySize = 0;
+        const MAX_BODY_SIZE = 1024 * 1024; // 1MB limit
+
         req.on('data', chunk => {
+          bodySize += chunk.length;
+          if (bodySize > MAX_BODY_SIZE) {
+            res.writeHead(413, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Request entity too large' }));
+            req.destroy(); // Stop receiving data
+            return;
+          }
           body += chunk.toString();
         });
         
         req.on('end', async () => {
+          if (req.destroyed) return;
+
           try {
             const request = JSON.parse(body);
             const { tool, params } = request;
@@ -122,89 +135,71 @@ async function main() {
             const clientIp = req.socket.remoteAddress || 'unknown';
             updateConnections(req.socket.remotePort?.toString() || 'client', clientIp);
             
-            // Call the appropriate tool via MCP SDK
+            // Call the appropriate tool
             try {
               const startTime = Date.now();
               
-              // Use the appropriate MCP SDK method to call the tool
-              // Note: The MCP SDK does not have a callTool method, so we must
-              // implement our own logic to route tool calls
-              let result;
-              
-              // Find the matching tool in the list of registered tools
-              if (serverTools.includes(tool)) {
-                // Call the tool using the Blogger service directly
-                switch (tool) {
-                  case 'list_blogs':
-                    const blogs = await bloggerService.listBlogs();
-                    result = { blogs };
-                    break;
-                  case 'get_blog':
-                    const blog = await bloggerService.getBlog(params.blogId);
-                    result = { blog };
-                    break;
-                  case 'list_posts':
-                    const posts = await bloggerService.listPosts(params.blogId, params.maxResults);
-                    result = { posts };
-                    break;
-                  case 'search_posts':
-                    const searchResults = await bloggerService.searchPosts(params.blogId, params.query, params.maxResults);
-                    result = { posts: searchResults };
-                    break;
-                  case 'get_post':
-                    const post = await bloggerService.getPost(params.blogId, params.postId);
-                    result = { post };
-                    break;
-                  case 'create_post':
-                    const newPost = await bloggerService.createPost(params.blogId, {
-                      title: params.title,
-                      content: params.content,
-                      labels: params.labels
-                    });
-                    result = { post: newPost };
-                    break;
-                  case 'update_post':
-                    const updatedPost = await bloggerService.updatePost(params.blogId, params.postId, {
-                      title: params.title,
-                      content: params.content,
-                      labels: params.labels
-                    });
-                    result = { post: updatedPost };
-                    break;
-                  case 'delete_post':
-                    await bloggerService.deletePost(params.blogId, params.postId);
-                    result = { success: true };
-                    break;
-                  case 'list_labels':
-                    const labels = await bloggerService.listLabels(params.blogId);
-                    result = { labels };
-                    break;
-                  case 'get_label':
-                    const label = await bloggerService.getLabel(params.blogId, params.labelName);
-                    result = { label };
-                    break;
-                  case 'create_blog':
-                    result = { 
-                      error: 'Blog creation is not supported by the Blogger API. Please create a blog via the Blogger web interface.' 
-                    };
-                    break;
-                  default:
-                    throw new Error(`Unknown tool: ${tool}`);
-                }
-              } else {
-                throw new Error(`Unknown tool: ${tool}`);
+              const toolDef = toolMap.get(tool);
+
+              if (!toolDef) {
+                 throw new Error(`Unknown tool: ${tool}`);
               }
+
+              // Validate parameters using Zod schema
+              let validatedParams;
+              try {
+                validatedParams = toolDef.args.parse(params || {});
+              } catch (validationError) {
+                throw new Error(`Invalid parameters: ${validationError}`);
+              }
+
+              // Execute tool handler
+              const result = await toolDef.handler(validatedParams);
               
               const duration = Date.now() - startTime;
               
               // Update success statistics
               updateStats(tool, true, duration);
               
+              // If the handler returned an isError: true, we might want to return 400 or just return the error object 
+              // as per MCP protocol. Here we are in HTTP mode, let's just return 200 with the result object which contains the error message.
+              // But strictly speaking, if it's an error, we should probably update stats as failed? 
+              // The handler catches exceptions and returns { isError: true, ... }. 
+              // So if result.isError is true, we should count it as failed?
+              // The previous implementation counted catch block as failed. 
+              // Let's stick to the previous logic: if handler throws, it's a failure. If handler returns result (even error result), it's success execution of the tool.
+              
               res.writeHead(200, { 
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*'
               });
-              res.end(JSON.stringify(result));
+              
+              // MCP Tools return { content: [...] }, but the previous HTTP implementation returned simplified objects like { blogs: [...] }.
+              // To maintain backward compatibility with the previous HTTP API (if any clients rely on it), 
+              // we might need to transform the MCP result format back to the simplified format?
+              // The previous switch statement returned `result = { blogs }`.
+              // The tool handlers now return `{ content: [{ type: 'text', text: JSON.stringify({ blogs }) }] }`.
+              // We should probably parse the JSON text back if we want to return JSON.
+              // OR, we just return the MCP result directly. 
+              // Given that this is an MCP server, clients should expect MCP format.
+              // HOWEVER, the `index.ts` HTTP implementation seemed to be a custom JSON API wrapper around the tools.
+              // Let's try to parse the response text if possible to match previous behavior, 
+              // OR better: accept that the response format changes to MCP standard or keep it simple.
+              // The previous implementation was: `res.end(JSON.stringify(result))` where result was `{ blogs: ... }`.
+              // The tool handlers return `{ content: [{ text: "{\"blogs\":...}" }] }`.
+              
+              // Let's unwrap it for HTTP mode to keep it friendly, or just return the text.
+              // If we want to return pure JSON like before:
+              try {
+                const textContent = result.content[0].text;
+                // If the text is JSON, parse it and return that.
+                const parsedContent = JSON.parse(textContent);
+                res.end(JSON.stringify(parsedContent));
+              } catch (e) {
+                // If not JSON, return as is wrapped
+                 res.end(JSON.stringify(result));
+              }
+
             } catch (error) {
               // Update failure statistics
               updateStats(tool, false);
@@ -298,13 +293,32 @@ async function main() {
       uiManager.updateConnections(Object.values(connections));
       
       // Update status with connection count
-      const updatedStatus: ServerStatus = {
+      // FIX: Update the variable and then send it
+      serverStatus = {
         ...serverStatus,
         connections: Object.keys(connections).length
       };
       
-      uiManager.updateStatus(updatedStatus);
+      uiManager.updateStatus(serverStatus);
     }
+
+    // Graceful shutdown
+    const shutdown = async () => {
+      console.log('Shutting down...');
+      serverStatus = { ...serverStatus, running: false };
+      uiManager.updateStatus(serverStatus);
+      
+      if (httpServer) {
+        httpServer.close();
+      }
+      
+      // Allow time for cleanup if needed
+      setTimeout(() => process.exit(0), 1000);
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+
   } catch (error) {
     console.error('Error starting Blogger MCP server:', error);
     process.exit(1);
