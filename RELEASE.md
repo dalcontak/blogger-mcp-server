@@ -4,16 +4,26 @@ This document explains how to create releases and publish to npm.
 
 ## Prerequisites
 
-1. **Fine-grained npm token** - Create one at https://www.npmjs.com/settings/tokens
-   - Granularity: Fine-grained token
-   - Packages: `@dalcontak/*`
-   - Access: Automation
-   - Expiration: 90 days (recommended) or 1 year
+### Setup Trusted Publishing (OIDC)
 
-2. **GitHub Secret** - Add the token to your repo:
-   - Go to: https://github.com/dalcontak/blogger-mcp-server/settings/secrets/actions
-   - Secret name: `NPM_TOKEN`
-   - Value: Your npm fine-grained token
+IMPORTANT: npm classic tokens are deprecated (revoked Nov 19, 2025). Fine-grained tokens have a 90-day maximum lifetime. The recommended approach is **Trusted Publishing (OIDC)**.
+
+#### Step 1: Configure GitHub Actions as Trusted Publisher
+
+1. Go to: https://www.npmjs.com/settings/trusted-publishing
+2. Click on **"GitHub Actions"**
+3. Click on **"Set up connection"**
+4. Fill in:
+   - **Organization or user**: `dalcontak` (or your GitHub username)
+   - **Repository**: `dalcontak/blogger-mcp-server`
+   - **Workflow filename**: `publish.yml` (name of the workflow file)
+5. Click **"Set up connection"**
+
+Optional but recommended:
+- ✅ **Require two-factor authentication**
+- ✅ **Disallow tokens** (forces OIDC usage)
+
+That's it! No token needed — OIDC generates short-lived, job-specific credentials automatically.
 
 ## Version Naming
 
@@ -30,7 +40,7 @@ Examples:
 ### Step 1: Update version in package.json
 
 ```bash
-# Open package.json and update the version
+# Open package.json and update version
 # "version": "1.1.7"
 ```
 
@@ -64,7 +74,7 @@ GitHub Actions will automatically:
 3. ✅ Install dependencies
 4. ✅ Run tests (npm test)
 5. ✅ Build (npm run build)
-6. ✅ Publish to npm (@dalcontak/blogger-mcp-server version X.Y.Z)
+6. ✅ Publish to npm using OIDC (no manual token needed)
 
 The workflow triggers on any push to branches matching `release/**`.
 
@@ -82,7 +92,32 @@ npm install @dalcontak/blogger-mcp-server
 
 ## Notes
 
-- The branch name **must** contain the version after "release-" (e.g., `release-1.1.7`)
+- The branch name **must** contain version after "release-" (e.g., `release-1.1.7`)
 - Version format: **3 digits separated by dots** (X.Y.Z)
 - Only pushes to `release/**` branches trigger the build/publish workflow
-- Make sure `NPM_TOKEN` GitHub Secret is configured before pushing release branches
+- **No GitHub secrets needed** for OIDC — just configure trusted publisher connection
+- Requires Node.js >= 11.5.1 (npm automatically detects OIDC credentials)
+
+## Troubleshooting
+
+### Error: "You are not set up to publish with OIDC"
+
+Make sure:
+1. GitHub Actions is configured as **Trusted Publisher** in npm settings
+2. Workflow filename matches: `publish.yml`
+3. Repository is correct: `dalcontak/blogger-mcp-server`
+4. Workflow has `permissions: id-token: write`
+
+### Error: "npm publish --provenance requires Node.js >= 11.5.1"
+
+The workflow uses `actions/setup-node@v6` which sets up Node.js 20. If you see this error, check your Node.js version.
+
+## Comparison: Tokens vs OIDC
+
+| Aspect | Classic Tokens | Fine-grained Tokens | Trusted Publishing (OIDC) |
+|---------|----------------|--------------------|---------------------------|
+| **Status** | ❌ Deprecated (revoked) | ⚠️ Limited to 90 days | ✅ Recommended |
+| **Rotation** | Manual (every 90 days max) | Manual (every 90 days max) | Automatic (job-specific) |
+| **Security** | Long-lived, stored in secrets | Short-lived, stored in secrets | Short-lived, job-specific |
+| **GitHub Secret** | Required (NPM_TOKEN) | Required (NPM_TOKEN) | ❌ Not needed |
+| **Setup** | Create token, add to secrets | Create token, add to secrets | Configure in npmjs.com |
