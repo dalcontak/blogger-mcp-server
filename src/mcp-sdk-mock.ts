@@ -1,14 +1,14 @@
 /**
- * Mock du SDK MCP pour éviter les problèmes de dépendances
- * Cette implémentation simplifiée fournit les fonctionnalités essentielles
- * du SDK MCP sans dépendre de la version exacte du package
+ * MCP SDK mock to avoid dependency issues
+ * This simplified implementation provides the essential features
+ * of the MCP SDK without depending on the exact package version
  */
 
 import { z } from 'zod';
 import * as http from 'http';
 import { ServerMode } from './types';
 
-// Interface pour les outils du serveur MCP
+// MCP server tool interface
 export interface MCPTool<T extends z.ZodType> {
   name: string;
   description: string;
@@ -16,21 +16,21 @@ export interface MCPTool<T extends z.ZodType> {
   handler: (params: z.infer<T>) => Promise<any>;
 }
 
-// Interface pour les options du serveur MCP
+// MCP server options interface
 export interface MCPServerOptions {
   name: string;
   version: string;
   mode: ServerMode;
 }
 
-// Interface pour le transport du serveur MCP
+// MCP server transport interface
 export interface ServerTransport {
   start: () => Promise<void>;
   stop: () => Promise<void>;
   onRequest?: (handler: (request: any) => Promise<any>) => void;
 }
 
-// Classe principale du serveur MCP
+// Main MCP server class
 export class MCPServer {
   private options: MCPServerOptions;
   private tools: Map<string, MCPTool<any>> = new Map();
@@ -40,12 +40,12 @@ export class MCPServer {
     this.options = options;
   }
 
-  // Ajoute un outil au serveur
+  // Adds a tool to the server
   addTool<T extends z.ZodType>(tool: MCPTool<T>): void {
     this.tools.set(tool.name, tool);
   }
 
-  // Connecte le serveur à un transport
+  // Connects the server to a transport
   async connect(transport: ServerTransport): Promise<void> {
     this.transport = transport;
     
@@ -56,7 +56,7 @@ export class MCPServer {
           
           if (!this.tools.has(tool)) {
             return {
-              error: `Outil non trouvé: ${tool}`
+              error: `Tool not found: ${tool}`
             };
           }
           
@@ -69,33 +69,33 @@ export class MCPServer {
           } catch (error) {
             if (error instanceof z.ZodError) {
               return {
-                error: `Paramètres invalides: ${error.message}`
+                error: `Invalid parameters: ${error.message}`
               };
             }
             
             return {
-              error: `Erreur lors de l'exécution de l'outil: ${error}`
+              error: `Error executing tool: ${error}`
             };
           }
         } catch (error) {
           return {
-            error: `Erreur interne du serveur: ${error}`
+            error: `Internal server error: ${error}`
           };
         }
       });
     }
   }
 
-  // Démarre le serveur
+  // Starts the server
   async start(): Promise<void> {
     if (!this.transport) {
-      throw new Error('Le serveur doit être connecté à un transport avant de démarrer');
+      throw new Error('Server must be connected to a transport before starting');
     }
     
     await this.transport.start();
   }
 
-  // Arrête le serveur
+  // Stops the server
   async stop(): Promise<void> {
     if (this.transport) {
       await this.transport.stop();
@@ -103,7 +103,7 @@ export class MCPServer {
   }
 }
 
-// Transport pour le mode stdio
+// Stdio mode transport
 export class StdioServerTransport implements ServerTransport {
   private requestHandler: ((request: any) => Promise<any>) | null = null;
 
@@ -119,13 +119,13 @@ export class StdioServerTransport implements ServerTransport {
           process.stdout.write(JSON.stringify(response) + '\n');
         }
       } catch (error) {
-        process.stdout.write(JSON.stringify({ error: `Erreur de parsing: ${error}` }) + '\n');
+        process.stdout.write(JSON.stringify({ error: `Parsing error: ${error}` }) + '\n');
       }
     });
   }
 
   async stop(): Promise<void> {
-    // Rien à faire pour le mode stdio
+    // Nothing to do for stdio mode
   }
 
   onRequest(handler: (request: any) => Promise<any>): void {
@@ -133,7 +133,7 @@ export class StdioServerTransport implements ServerTransport {
   }
 }
 
-// Transport pour le mode HTTP
+// HTTP mode transport
 export class HttpServerTransport implements ServerTransport {
   private server: http.Server | null = null;
   private requestHandler: ((request: any) => Promise<any>) | null = null;
@@ -160,7 +160,7 @@ export class HttpServerTransport implements ServerTransport {
       
       if (req.method !== 'POST') {
         res.statusCode = 405;
-        res.end(JSON.stringify({ error: 'Méthode non autorisée' }));
+        res.end(JSON.stringify({ error: 'Method not allowed' }));
         return;
       }
       
@@ -181,16 +181,16 @@ export class HttpServerTransport implements ServerTransport {
               res.end(JSON.stringify(response));
             } else {
               res.statusCode = 500;
-              res.end(JSON.stringify({ error: 'Gestionnaire de requêtes non configuré' }));
+              res.end(JSON.stringify({ error: 'Request handler not configured' }));
             }
           } catch (error) {
             res.statusCode = 400;
-            res.end(JSON.stringify({ error: `Erreur de parsing: ${error}` }));
+            res.end(JSON.stringify({ error: `Parsing error: ${error}` }));
           }
         });
       } catch (error) {
         res.statusCode = 500;
-        res.end(JSON.stringify({ error: `Erreur interne du serveur: ${error}` }));
+        res.end(JSON.stringify({ error: `Internal server error: ${error}` }));
       }
     });
     
@@ -224,7 +224,7 @@ export class HttpServerTransport implements ServerTransport {
   }
 }
 
-// Classe pour les templates de ressources
+// Resource template class
 export class ResourceTemplate<T> {
   constructor(private resource: T) {}
 

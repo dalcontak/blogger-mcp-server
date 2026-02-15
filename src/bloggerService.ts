@@ -3,7 +3,7 @@ import { BloggerBlog, BloggerPost, BloggerLabel } from './types';
 import { config } from './config';
 
 /**
- * Types personnalisés pour compenser les limitations de l'API Blogger
+ * Custom types to compensate for Blogger API limitations
  */
 interface BloggerLabelList {
   kind?: string;
@@ -90,15 +90,15 @@ export class BloggerService {
       });
       return response.data;
     } catch (error) {
-      console.error('Erreur lors de la récupération des blogs:', error);
+      console.error('Error fetching blogs:', error);
       throw error;
     }
   }
 
   /**
-   * Récupère les détails d'un blog spécifique
-   * @param blogId ID du blog à récupérer
-   * @returns Détails du blog
+   * Retrieves details of a specific blog
+   * @param blogId ID of the blog to retrieve
+   * @returns Blog details
    */
   async getBlog(blogId: string): Promise<blogger_v3.Schema$Blog> {
     try {
@@ -107,37 +107,37 @@ export class BloggerService {
       });
       return response.data;
     } catch (error) {
-      console.error(`Erreur lors de la récupération du blog ${blogId}:`, error);
+      console.error(`Error fetching blog ${blogId}:`, error);
       throw error;
     }
   }
 
   /**
-   * Simule la création d'un nouveau blog
-   * Note: L'API Blogger ne permet pas réellement de créer un blog via API
-   * Cette méthode simule la fonctionnalité et retourne un message d'erreur explicatif
+   * Simulates blog creation.
+   * Note: The Blogger API does not actually allow creating a blog via API.
+   * This method simulates the functionality and returns an explanatory error message.
    * 
-   * @param blogData Données du blog à créer
-   * @returns Message d'erreur explicatif
+   * @param blogData Blog data to create
+   * @returns Explanatory error message
    */
   async createBlog(blogData: Partial<BloggerBlog>): Promise<any> {
-    // Simuler un délai pour rendre la réponse plus réaliste
+    // Simulate a delay to make the response more realistic
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Retourner un message d'erreur explicatif
+    // Return an explanatory error message
     return {
       error: true,
-      message: "L'API Blogger de Google ne permet pas de créer un nouveau blog via API. Veuillez créer un blog manuellement sur blogger.com.",
-      details: "Cette limitation est documentée par Google. Les blogs doivent être créés via l'interface web de Blogger.",
-      suggestedAction: "Créez un blog sur https://www.blogger.com, puis utilisez son ID avec ce serveur MCP."
+      message: "The Google Blogger API does not allow creating a new blog via API. Please create a blog manually on blogger.com.",
+      details: "This limitation is documented by Google. Blogs must be created via the Blogger web interface.",
+      suggestedAction: "Create a blog at https://www.blogger.com, then use its ID with this MCP server."
     };
   }
 
   /**
-   * Liste les posts d'un blog
-   * @param blogId ID du blog
-   * @param maxResults Nombre maximum de résultats à retourner
-   * @returns Liste des posts
+   * Lists posts from a blog
+   * @param blogId Blog ID
+   * @param maxResults Maximum number of results to return
+   * @returns Post list
    */
   async listPosts(blogId: string, maxResults?: number): Promise<blogger_v3.Schema$PostList> {
     try {
@@ -147,7 +147,7 @@ export class BloggerService {
       });
       return response.data;
     } catch (error) {
-      console.error(`Erreur lors de la récupération des posts du blog ${blogId}:`, error);
+      console.error(`Error fetching posts for blog ${blogId}:`, error);
       throw error;
     }
   }
@@ -177,16 +177,16 @@ export class BloggerService {
         items: items.slice(0, limit)
       };
     } catch (error) {
-      console.error(`Erreur lors de la recherche de posts dans le blog ${blogId}:`, error);
+      console.error(`Error searching posts in blog ${blogId}:`, error);
       throw error;
     }
   }
 
   /**
-   * Récupère un post spécifique
-   * @param blogId ID du blog
-   * @param postId ID du post
-   * @returns Détails du post
+   * Retrieves a specific post
+   * @param blogId Blog ID
+   * @param postId Post ID
+   * @returns Post details
    */
   async getPost(blogId: string, postId: string): Promise<blogger_v3.Schema$Post> {
     try {
@@ -196,7 +196,7 @@ export class BloggerService {
       });
       return response.data;
     } catch (error) {
-      console.error(`Erreur lors de la récupération du post ${postId}:`, error);
+      console.error(`Error fetching post ${postId}:`, error);
       throw error;
     }
   }
@@ -217,7 +217,7 @@ export class BloggerService {
       });
       return response.data;
     } catch (error) {
-      console.error(`Erreur lors de la création du post dans le blog ${blogId}:`, error);
+      console.error(`Error creating post in blog ${blogId}:`, error);
       throw error;
     }
   }
@@ -233,7 +233,7 @@ export class BloggerService {
   async updatePost(blogId: string, postId: string, postData: Partial<BloggerPost>): Promise<blogger_v3.Schema$Post> {
     this.requireOAuth2('update_post');
     try {
-      // Convertir les types pour éviter les erreurs de compilation
+      // Convert types to avoid compilation errors
       const requestBody: blogger_v3.Schema$Post = {
         title: postData.title,
         content: postData.content,
@@ -247,7 +247,7 @@ export class BloggerService {
       });
       return response.data;
     } catch (error) {
-      console.error(`Erreur lors de la mise à jour du post ${postId}:`, error);
+      console.error(`Error updating post ${postId}:`, error);
       throw error;
     }
   }
@@ -267,35 +267,35 @@ export class BloggerService {
         postId
       });
     } catch (error) {
-      console.error(`Erreur lors de la suppression du post ${postId}:`, error);
+      console.error(`Error deleting post ${postId}:`, error);
       throw error;
     }
   }
 
   /**
-   * Liste les labels d'un blog
-   * @param blogId ID du blog
-   * @returns Liste des labels
+   * Lists labels from a blog
+   * @param blogId Blog ID
+   * @returns Label list
    */
   async listLabels(blogId: string): Promise<BloggerLabelList> {
     try {
-      // L'API Blogger ne fournit pas d'endpoint direct pour lister les labels
-      // Nous allons récupérer tous les posts et extraire les labels uniques
+      // The Blogger API does not provide a direct endpoint to list labels
+      // We fetch all posts and extract unique labels
       const response = await this.blogger.posts.list({
         blogId,
-        maxResults: 50 // Récupérer un nombre suffisant de posts pour extraire les labels
+        maxResults: 50 // Fetch enough posts to extract labels
       });
       
       const posts = response.data.items || [];
       const labelSet = new Set<string>();
       
-      // Extraire tous les labels uniques des posts
+      // Extract all unique labels from posts
       posts.forEach(post => {
         const postLabels = post.labels || [];
         postLabels.forEach(label => labelSet.add(label));
       });
       
-      // Convertir en format attendu
+      // Convert to expected format
       const labels = Array.from(labelSet).map(name => ({ name }));
       
       return {
@@ -303,31 +303,31 @@ export class BloggerService {
         items: labels
       };
     } catch (error) {
-      console.error(`Erreur lors de la récupération des labels du blog ${blogId}:`, error);
+      console.error(`Error fetching labels for blog ${blogId}:`, error);
       throw error;
     }
   }
 
   /**
-   * Récupère un label spécifique
-   * @param blogId ID du blog
-   * @param labelName Nom du label
-   * @returns Détails du label
+   * Retrieves a specific label
+   * @param blogId Blog ID
+   * @param labelName Label name
+   * @returns Label details
    */
   async getLabel(blogId: string, labelName: string): Promise<BloggerLabel> {
     try {
-      // L'API Blogger ne fournit pas d'endpoint direct pour récupérer un label
-      // Nous allons vérifier si le label existe en listant les labels
+      // The Blogger API does not provide a direct endpoint to retrieve a label
+      // We check if the label exists by listing all labels
       const labels = await this.listLabels(blogId);
       const label = labels.items?.find(l => l.name === labelName);
       
       if (!label) {
-        throw new Error(`Label ${labelName} non trouvé`);
+        throw new Error(`Label ${labelName} not found`);
       }
       
       return label;
     } catch (error) {
-      console.error(`Erreur lors de la récupération du label ${labelName}:`, error);
+      console.error(`Error fetching label ${labelName}:`, error);
       throw error;
     }
   }

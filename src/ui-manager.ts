@@ -4,7 +4,7 @@ import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { ServerStatus, ClientConnection, ServerStats } from './types';
 
-// Interface pour le gestionnaire d'UI
+// UI manager interface
 export interface UIManager {
   start(port: number): Promise<void>;
   stop(): Promise<void>;
@@ -13,7 +13,7 @@ export interface UIManager {
   updateStats(stats: ServerStats): void;
 }
 
-// Implémentation du gestionnaire d'UI
+// UI manager implementation
 export class WebUIManager implements UIManager {
   private app: express.Application;
   private server: HttpServer | null = null;
@@ -36,11 +36,11 @@ export class WebUIManager implements UIManager {
   constructor() {
     this.app = express();
     
-    // Configuration d'Express
+    // Express configuration
     this.app.use(express.json());
     this.app.use(express.static(path.join(__dirname, '../public')));
     
-    // Routes API
+    // API routes
     this.app.get('/api/status', (req, res) => {
       res.json(this.status);
     });
@@ -53,7 +53,7 @@ export class WebUIManager implements UIManager {
       res.json(this.stats);
     });
     
-    // Route principale pour l'interface utilisateur - correction de la route wildcard
+    // Main route for the UI - wildcard route fix
     this.app.get('/', (req, res) => {
       res.sendFile(path.join(__dirname, '../public/index.html'));
     });
@@ -64,24 +64,24 @@ export class WebUIManager implements UIManager {
       this.server = new HttpServer(this.app);
       this.io = new SocketIOServer(this.server);
       
-      // Configuration de Socket.IO
+      // Socket.IO configuration
       this.io.on('connection', (socket) => {
-        console.log('Nouvelle connexion UI:', socket.id);
+        console.log('New UI connection:', socket.id);
         
-        // Envoyer les données initiales
+        // Send initial data
         socket.emit('status', this.status);
         socket.emit('connections', this.connections);
         socket.emit('stats', this.stats);
         
-        // Gérer les actions de l'utilisateur
+        // Handle user actions
         socket.on('restart-server', () => {
-          console.log('Demande de redémarrage du serveur reçue');
-          // Logique de redémarrage à implémenter
+          console.log('Server restart request received');
+          // Restart logic to be implemented
         });
       });
       
       this.server.listen(port, () => {
-        console.log(`Interface utilisateur démarrée sur le port ${port}`);
+        console.log(`Web UI started on port ${port}`);
         resolve();
       });
     });

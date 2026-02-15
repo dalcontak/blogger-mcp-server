@@ -1,20 +1,20 @@
-// Configuration du serveur MCP pour Blogger
+// MCP server configuration for Blogger
 export const config = {
-  // Mode de fonctionnement du serveur (stdio ou http)
+  // Server operating mode (stdio or http)
   mode: process.env.MCP_MODE || 'stdio',
   
-  // Configuration du mode HTTP (si utilisé)
+  // HTTP mode configuration (if used)
   http: {
     host: process.env.MCP_HTTP_HOST || '0.0.0.0',
     port: parseInt(process.env.MCP_HTTP_PORT || '3000', 10)
   },
   
-  // Configuration de l'API Blogger
+  // Blogger API configuration
   blogger: {
     apiKey: process.env.BLOGGER_API_KEY,
-    // Nombre maximum de résultats par défaut pour les requêtes de liste
+    // Default maximum number of results for list queries
     maxResults: parseInt(process.env.BLOGGER_MAX_RESULTS || '10', 10),
-    // Timeout pour les requêtes API en millisecondes
+    // API request timeout in milliseconds
     timeout: parseInt(process.env.BLOGGER_API_TIMEOUT || '30000', 10)
   },
   
@@ -26,7 +26,7 @@ export const config = {
     refreshToken: process.env.GOOGLE_REFRESH_TOKEN
   },
   
-  // Configuration des logs
+  // Logging configuration
   logging: {
     level: process.env.LOG_LEVEL || 'info'
   }

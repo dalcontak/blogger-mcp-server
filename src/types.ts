@@ -1,8 +1,8 @@
 /**
- * Types utilisés dans le serveur MCP pour Blogger
+ * Types used in the MCP server for Blogger
  */
 
-// Type pour un blog
+// Blog type
 export interface BloggerBlog {
   id: string;
   name: string;
@@ -13,7 +13,7 @@ export interface BloggerBlog {
   labels?: BloggerLabel[];
 }
 
-// Type pour un post
+// Post type
 export interface BloggerPost {
   id: string;
   blogId: string;
@@ -33,25 +33,25 @@ export interface BloggerPost {
   labels?: string[];
 }
 
-// Type pour un label
+// Label type
 export interface BloggerLabel {
   id?: string;
   name: string;
 }
 
-// Type pour les paramètres de recherche
+// Search parameters type
 export interface SearchParams {
   query: string;
   maxResults?: number;
 }
 
-// Type pour les paramètres de pagination
+// Pagination parameters type
 export interface PaginationParams {
   pageToken?: string;
   maxResults?: number;
 }
 
-// Type pour les modes de fonctionnement du serveur
+// Server operating modes type
 export type ServerMode =
   | { type: 'stdio' }
   | { type: 'http', host: string, port: number };
@@ -63,7 +63,7 @@ export interface OAuth2Config {
   refreshToken?: string;
 }
 
-// Type pour la configuration du serveur
+// Server configuration type
 export interface ServerConfig {
   mode: ServerMode;
   blogger: {
@@ -77,7 +77,7 @@ export interface ServerConfig {
   };
 }
 
-// Types pour l'interface utilisateur
+// UI types
 export interface ServerStatus {
   running: boolean;
   mode: string;

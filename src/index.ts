@@ -7,11 +7,11 @@ import { ServerMode, ServerStatus, ClientConnection, ServerStats } from './types
 import { WebUIManager } from './ui-manager';
 
 /**
- * Point d'entrée principal du serveur MCP pour Blogger
+ * Main entry point for the Blogger MCP server
  */
 async function main() {
   try {
-    console.log('Démarrage du serveur MCP pour Blogger...');
+    console.log('Starting Blogger MCP server...');
     
     // Verify that at least one authentication method is configured
     const hasOAuth2 = !!(config.oauth2.clientId && config.oauth2.clientSecret && config.oauth2.refreshToken);
@@ -32,10 +32,10 @@ async function main() {
       console.log('Authentication mode: API Key (read-only)');
     }
     
-    // Initialiser le service Blogger
+    // Initialize the Blogger service
     const bloggerService = new BloggerService();
     
-    // Convertir la configuration au format attendu par le serveur
+    // Convert configuration to the format expected by the server
     const serverMode: ServerMode = config.mode === 'http' 
       ? { type: 'http' as const, host: config.http.host, port: config.http.port } 
       : { type: 'stdio' as const };
@@ -47,17 +47,17 @@ async function main() {
       logging: config.logging
     };
     
-    // Initialiser le serveur MCP avec tous les outils
+    // Initialize the MCP server with all tools
     const server = initMCPServer(bloggerService, serverConfig);
     
-    // Initialiser le gestionnaire d'interface utilisateur
+    // Initialize the UI manager
     const uiManager = new WebUIManager();
     
-    // Démarrer l'interface utilisateur sur le port 3001 (ou un autre port configuré)
+    // Start the UI on port 3001 (or another configured port)
     const uiPort = process.env.UI_PORT ? parseInt(process.env.UI_PORT) : 3001;
     await uiManager.start(uiPort);
     
-    // Initialiser les statistiques et l'état du serveur
+    // Initialize server statistics and status
     const serverTools = [
       'list_blogs', 'get_blog', 'create_blog', 'list_posts', 
       'search_posts', 'get_post', 'create_post', 'update_post', 
@@ -86,10 +86,10 @@ async function main() {
     uiManager.updateStatus(serverStatus);
     uiManager.updateStats(serverStats);
     
-    // Configurer le transport approprié selon le mode
+    // Configure the appropriate transport based on the mode
     if (serverMode.type === 'http') {
-      // Pour le mode HTTP, nous utilisons directement le serveur HTTP de Node.js
-      // car le SDK MCP officiel n'a pas d'équivalent direct à HttpServerTransport
+      // For HTTP mode, we use Node.js HTTP server directly
+      // since the official MCP SDK does not have an HttpServerTransport equivalent
       const httpMode = serverMode;
       const httpServer = new HttpServer((req, res) => {
         if (req.method === 'OPTIONS') {
@@ -104,7 +104,7 @@ async function main() {
         
         if (req.method !== 'POST') {
           res.writeHead(405, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Méthode non autorisée' }));
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
           return;
         }
         
@@ -118,22 +118,22 @@ async function main() {
             const request = JSON.parse(body);
             const { tool, params } = request;
             
-            // Ajouter une connexion client
+            // Add client connection
             const clientIp = req.socket.remoteAddress || 'unknown';
             updateConnections(req.socket.remotePort?.toString() || 'client', clientIp);
             
-            // Appeler l'outil approprié via le SDK MCP
+            // Call the appropriate tool via MCP SDK
             try {
               const startTime = Date.now();
               
-              // Utiliser la méthode appropriée du SDK MCP pour appeler l'outil
-              // Note: Le SDK MCP n'a pas de méthode callTool, nous devons donc
-              // implémenter notre propre logique pour router les appels d'outils
+              // Use the appropriate MCP SDK method to call the tool
+              // Note: The MCP SDK does not have a callTool method, so we must
+              // implement our own logic to route tool calls
               let result;
               
-              // Trouver l'outil correspondant dans la liste des outils enregistrés
+              // Find the matching tool in the list of registered tools
               if (serverTools.includes(tool)) {
-                // Simuler l'appel d'outil en utilisant directement le service Blogger
+                // Call the tool using the Blogger service directly
                 switch (tool) {
                   case 'list_blogs':
                     const blogs = await bloggerService.listBlogs();
@@ -185,19 +185,19 @@ async function main() {
                     break;
                   case 'create_blog':
                     result = { 
-                      error: 'La création de blogs n\'est pas supportée par l\'API Blogger. Veuillez créer un blog via l\'interface web de Blogger.' 
+                      error: 'Blog creation is not supported by the Blogger API. Please create a blog via the Blogger web interface.' 
                     };
                     break;
                   default:
-                    throw new Error(`Outil inconnu: ${tool}`);
+                    throw new Error(`Unknown tool: ${tool}`);
                 }
               } else {
-                throw new Error(`Outil inconnu: ${tool}`);
+                throw new Error(`Unknown tool: ${tool}`);
               }
               
               const duration = Date.now() - startTime;
               
-              // Mettre à jour les statistiques de réussite
+              // Update success statistics
               updateStats(tool, true, duration);
               
               res.writeHead(200, { 
@@ -206,35 +206,35 @@ async function main() {
               });
               res.end(JSON.stringify(result));
             } catch (error) {
-              // Mettre à jour les statistiques d'échec
+              // Update failure statistics
               updateStats(tool, false);
               
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ 
-                error: `Erreur lors de l'exécution de l'outil: ${error}` 
+                error: `Error executing tool: ${error}` 
               }));
             }
           } catch (error) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: `Erreur de parsing: ${error}` }));
+            res.end(JSON.stringify({ error: `Parsing error: ${error}` }));
           }
         });
       });
       
       httpServer.listen(httpMode.port, httpMode.host, () => {
-        console.log(`Serveur MCP pour Blogger démarré en mode HTTP`);
-        console.log(`Écoute sur ${httpMode.host}:${httpMode.port}`);
-        console.log(`Interface utilisateur disponible sur http://localhost:${uiPort}`);
+        console.log(`Blogger MCP server started in HTTP mode`);
+        console.log(`Listening on ${httpMode.host}:${httpMode.port}`);
+        console.log(`Web UI available at http://localhost:${uiPort}`);
       });
     } else {
-      // Pour le mode stdio, nous utilisons le transport du SDK MCP officiel
+      // For stdio mode, we use the official MCP SDK transport
       const transport = new StdioServerTransport();
       await server.connect(transport);
-      console.log(`Serveur MCP pour Blogger démarré en mode stdio`);
-      console.log(`Interface utilisateur disponible sur http://localhost:${uiPort}`);
+      console.log(`Blogger MCP server started in stdio mode`);
+      console.log(`Web UI available at http://localhost:${uiPort}`);
     }
     
-    // Fonctions pour mettre à jour les statistiques et les connexions
+    // Functions to update statistics and connections
     const connections: Record<string, ClientConnection> = {};
     let stats = {
       totalRequests: 0,
@@ -287,7 +287,7 @@ async function main() {
         connections[clientId].requestCount++;
       }
       
-      // Nettoyer les connexions inactives (plus de 5 minutes)
+      // Clean up inactive connections (older than 5 minutes)
       const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
       Object.keys(connections).forEach(id => {
         if (connections[id].lastActivity < fiveMinutesAgo) {
@@ -297,7 +297,7 @@ async function main() {
       
       uiManager.updateConnections(Object.values(connections));
       
-      // Mettre à jour le statut avec le nombre de connexions
+      // Update status with connection count
       const updatedStatus: ServerStatus = {
         ...serverStatus,
         connections: Object.keys(connections).length
@@ -306,10 +306,10 @@ async function main() {
       uiManager.updateStatus(updatedStatus);
     }
   } catch (error) {
-    console.error('Erreur lors du démarrage du serveur MCP pour Blogger:', error);
+    console.error('Error starting Blogger MCP server:', error);
     process.exit(1);
   }
 }
 
-// Exécuter la fonction principale
+// Run main function
 main();
