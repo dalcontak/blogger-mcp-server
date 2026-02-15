@@ -13,6 +13,12 @@ async function main() {
   try {
     console.log('Démarrage du serveur MCP pour Blogger...');
     
+    // Vérifier que la clé API est configurée
+    if (!config.blogger.apiKey) {
+      console.error('ERREUR: La variable d\'environnement BLOGGER_API_KEY est requise.');
+      process.exit(1);
+    }
+    
     // Initialiser le service Blogger
     const bloggerService = new BloggerService();
     
@@ -97,9 +103,6 @@ async function main() {
           try {
             const request = JSON.parse(body);
             const { tool, params } = request;
-            
-            // Mettre à jour les statistiques
-            updateStats(tool);
             
             // Ajouter une connexion client
             const clientIp = req.socket.remoteAddress || 'unknown';
