@@ -55,13 +55,19 @@ async function main() {
     const toolMap = new Map(toolDefinitions.map(t => [t.name, t]));
     const serverTools = toolDefinitions.map(t => t.name);
 
-    // Initialize the UI manager
-    const uiManager = new WebUIManager();
-    
-    // Start the UI on port 3001 (or another configured port)
-    const uiPort = process.env.UI_PORT ? parseInt(process.env.UI_PORT) : 3001;
-    await uiManager.start(uiPort);
-    
+    // Initialize the Web UI only if UI_PORT is set
+    let uiManager: WebUIManager | undefined;
+    let uiPort: number | undefined;
+
+    if (process.env.UI_PORT) {
+      const parsedPort = parseInt(process.env.UI_PORT);
+      if (!isNaN(parsedPort) && parsedPort > 0 && parsedPort < 65536) {
+        uiManager = new WebUIManager();
+        uiPort = parsedPort;
+        await uiManager.start(uiPort);
+      }
+    }
+
     // Initialize server statistics and status
     let serverStatus: ServerStatus = {
       running: true,
@@ -70,7 +76,7 @@ async function main() {
       connections: 0,
       tools: serverTools
     };
-    
+
     const serverStats: ServerStats = {
       totalRequests: 0,
       successfulRequests: 0,
@@ -81,9 +87,11 @@ async function main() {
         return acc;
       }, {} as Record<string, number>)
     };
-    
-    uiManager.updateStatus(serverStatus);
-    uiManager.updateStats(serverStats);
+
+    if (uiManager) {
+      uiManager.updateStatus(serverStatus);
+      uiManager.updateStats(serverStats);
+    }
     
     // Configure the appropriate transport based on the mode
     let httpServer: HttpServer | undefined;
@@ -219,14 +227,18 @@ async function main() {
       httpServer.listen(httpMode.port, httpMode.host, () => {
         console.log(`Blogger MCP server started in HTTP mode`);
         console.log(`Listening on ${httpMode.host}:${httpMode.port}`);
-        console.log(`Web UI available at http://localhost:${uiPort}`);
+        if (uiPort) {
+          console.log(`Web UI available at http://localhost:${uiPort}`);
+        }
       });
     } else {
       // For stdio mode, we use the official MCP SDK transport
       const transport = new StdioServerTransport();
       await server.connect(transport);
       console.log(`Blogger MCP server started in stdio mode`);
-      console.log(`Web UI available at http://localhost:${uiPort}`);
+      if (uiPort) {
+        console.log(`Web UI available at http://localhost:${uiPort}`);
+      }
     }
     
     // Functions to update statistics and connections
@@ -262,8 +274,10 @@ async function main() {
           : 0,
         toolUsage: stats.toolUsage
       };
-      
-      uiManager.updateStats(updatedStats);
+
+      if (uiManager) {
+        uiManager.updateStats(updatedStats);
+      }
     }
     
     function updateConnections(clientId: string, clientIp?: string) {
@@ -289,29 +303,35 @@ async function main() {
           delete connections[id];
         }
       });
-      
-      uiManager.updateConnections(Object.values(connections));
-      
+
+      if (uiManager) {
+        uiManager.updateConnections(Object.values(connections));
+      }
+
       // Update status with connection count
       // FIX: Update the variable and then send it
       serverStatus = {
         ...serverStatus,
         connections: Object.keys(connections).length
       };
-      
-      uiManager.updateStatus(serverStatus);
+
+      if (uiManager) {
+        uiManager.updateStatus(serverStatus);
+      }
     }
 
     // Graceful shutdown
     const shutdown = async () => {
       console.log('Shutting down...');
       serverStatus = { ...serverStatus, running: false };
-      uiManager.updateStatus(serverStatus);
-      
+      if (uiManager) {
+        uiManager.updateStatus(serverStatus);
+      }
+
       if (httpServer) {
         httpServer.close();
       }
-      
+
       // Allow time for cleanup if needed
       setTimeout(() => process.exit(0), 1000);
     };

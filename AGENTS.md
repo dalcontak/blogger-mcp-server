@@ -3,8 +3,8 @@
 ## Project Overview
 
 MCP (Model Context Protocol) server for Google's Blogger API. Allows AI models to
-interact with Blogger blogs via stdio or HTTP transport. Includes a web dashboard
-(Express + Socket.IO) on a separate port. Written in TypeScript, targeting Node.js 20.
+interact with Blogger blogs via stdio or HTTP transport. Includes an optional web dashboard
+(Express + Socket.IO) on a separate port when `UI_PORT` is set. Written in TypeScript, targeting Node.js 20.
 
 Package: `@mcproadev/blogger-mcp-server` (v1.0.4)
 
@@ -72,7 +72,7 @@ dist/                 # Compiled output (committed to repo)
 | `BLOGGER_MAX_RESULTS` | `10` | Max results per query |
 | `BLOGGER_API_TIMEOUT` | `30000` | API timeout (ms) |
 | `LOG_LEVEL` | `info` | Logging level |
-| `UI_PORT` | `3001` | Web dashboard port |
+| `UI_PORT` | (disabled) | Web dashboard port (set to enable) |
 
 **Authentication:** At least one auth method is required:
 - **API Key only** (`BLOGGER_API_KEY`): read-only access to public blogs. Works for `get_blog`,
