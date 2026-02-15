@@ -63,7 +63,10 @@ dist/                 # Compiled output (committed to repo)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `BLOGGER_API_KEY` | (required) | Google Blogger API key |
+| `BLOGGER_API_KEY` | (optional) | Google Blogger API key (read-only access to public blogs) |
+| `GOOGLE_CLIENT_ID` | (optional) | OAuth2 client ID (for full read/write access) |
+| `GOOGLE_CLIENT_SECRET` | (optional) | OAuth2 client secret |
+| `GOOGLE_REFRESH_TOKEN` | (optional) | OAuth2 refresh token (scope: `blogger`) |
 | `MCP_MODE` | `stdio` | Transport: `stdio` or `http` |
 | `MCP_HTTP_HOST` | `0.0.0.0` | HTTP host |
 | `MCP_HTTP_PORT` | `3000` | HTTP port |
@@ -71,6 +74,13 @@ dist/                 # Compiled output (committed to repo)
 | `BLOGGER_API_TIMEOUT` | `30000` | API timeout (ms) |
 | `LOG_LEVEL` | `info` | Logging level |
 | `UI_PORT` | `3001` | Web dashboard port |
+
+**Authentication:** At least one auth method is required:
+- **API Key only** (`BLOGGER_API_KEY`): read-only access to public blogs. Works for `get_blog`,
+  `list_posts`, `get_post`, `search_posts`, `list_labels`, `get_label`.
+- **OAuth2** (`GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` + `GOOGLE_REFRESH_TOKEN`): full access.
+  Required for `list_blogs`, `create_post`, `update_post`, `delete_post`.
+- If both are set, OAuth2 is used (it covers all operations).
 
 ## Code Style Guidelines
 

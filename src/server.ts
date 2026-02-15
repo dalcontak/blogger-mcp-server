@@ -13,7 +13,7 @@ export function initMCPServer(bloggerService: BloggerService, config: ServerConf
   // Créer une nouvelle instance du serveur MCP avec les informations du serveur
   const server = new McpServer({
     name: "Blogger MCP Server",
-    version: "1.0.1",
+    version: "1.0.4",
     vendor: "mcproadev"
   });
 

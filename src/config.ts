@@ -18,6 +18,14 @@ export const config = {
     timeout: parseInt(process.env.BLOGGER_API_TIMEOUT || '30000', 10)
   },
   
+  // OAuth2 configuration for authenticated operations (create, update, delete)
+  // If these variables are not set, the server runs in read-only mode (API key)
+  oauth2: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    refreshToken: process.env.GOOGLE_REFRESH_TOKEN
+  },
+  
   // Configuration des logs
   logging: {
     level: process.env.LOG_LEVEL || 'info'

@@ -11,27 +11,79 @@ interface BloggerLabelList {
 }
 
 /**
- * Service d'interaction avec l'API Blogger de Google
+ * Google Blogger API interaction service
+ * 
+ * Supports two authentication modes:
+ * - OAuth2 (GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + GOOGLE_REFRESH_TOKEN):
+ *   full access (read + write). Required for listBlogs, createPost, updatePost, deletePost.
+ * - API Key (BLOGGER_API_KEY): read-only access to public blogs.
+ *   Works for getBlog, listPosts, getPost, searchPosts, listLabels, getLabel.
+ * 
+ * If both are configured, OAuth2 is used (it covers all operations).
  */
 export class BloggerService {
   private blogger: blogger_v3.Blogger;
+  private readonly isOAuth2: boolean;
 
   /**
-   * Initialise le service Blogger avec l'API key
+   * Initializes the Blogger service with OAuth2 or API key
    */
   constructor() {
-    this.blogger = google.blogger({
-      version: 'v3',
-      auth: config.blogger.apiKey,
-      timeout: config.blogger.timeout
-    });
+    const { oauth2 } = config;
+    const hasOAuth2 = !!(oauth2.clientId && oauth2.clientSecret && oauth2.refreshToken);
+
+    if (hasOAuth2) {
+      const oauth2Client = new google.auth.OAuth2(
+        oauth2.clientId,
+        oauth2.clientSecret
+      );
+      oauth2Client.setCredentials({ refresh_token: oauth2.refreshToken });
+
+      this.blogger = google.blogger({
+        version: 'v3',
+        auth: oauth2Client,
+        timeout: config.blogger.timeout
+      });
+      this.isOAuth2 = true;
+      console.log('BloggerService initialized with OAuth2 (full access)');
+    } else if (config.blogger.apiKey) {
+      this.blogger = google.blogger({
+        version: 'v3',
+        auth: config.blogger.apiKey,
+        timeout: config.blogger.timeout
+      });
+      this.isOAuth2 = false;
+      console.log('BloggerService initialized with API Key (read-only)');
+    } else {
+      throw new Error(
+        'No authentication configured. ' +
+        'Set BLOGGER_API_KEY (read-only) or ' +
+        'GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + GOOGLE_REFRESH_TOKEN (full access).'
+      );
+    }
   }
 
   /**
-   * Liste tous les blogs accessibles
-   * @returns Liste des blogs
+   * Checks that OAuth2 authentication is available.
+   * Throws an explicit error if the operation requires OAuth2 and we are in API key mode.
+   */
+  private requireOAuth2(operation: string): void {
+    if (!this.isOAuth2) {
+      throw new Error(
+        `Operation "${operation}" requires OAuth2 authentication. ` +
+        'API Key mode only allows reading public blogs. ' +
+        'Configure GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_REFRESH_TOKEN.'
+      );
+    }
+  }
+
+  /**
+   * Lists all blogs for the authenticated user.
+   * Requires OAuth2 (blogs.listByUser with userId: 'self').
+   * @returns Blog list
    */
   async listBlogs(): Promise<blogger_v3.Schema$BlogList> {
+    this.requireOAuth2('list_blogs');
     try {
       const response = await this.blogger.blogs.listByUser({
         userId: 'self'
@@ -101,33 +153,28 @@ export class BloggerService {
   }
 
   /**
-   * Recherche des posts dans un blog
-   * @param blogId ID du blog
-   * @param query Terme de recherche
-   * @param maxResults Nombre maximum de résultats à retourner
-   * @returns Liste des posts correspondants
+   * Searches posts in a blog using the native posts.search endpoint of the Blogger API
+   * @param blogId Blog ID
+   * @param query Search term
+   * @param maxResults Maximum number of results to return
+   * @returns List of matching posts
    */
   async searchPosts(blogId: string, query: string, maxResults?: number): Promise<blogger_v3.Schema$PostList> {
     try {
-      // Récupérer tous les posts puis filtrer côté client
-      // car l'API Blogger ne fournit pas d'endpoint de recherche directe
-      const response = await this.blogger.posts.list({
+      const response = await this.blogger.posts.search({
         blogId,
-        maxResults: maxResults || config.blogger.maxResults
+        q: query,
+        fetchBodies: true
       });
-      
-      // Filtrer les posts qui contiennent le terme de recherche
-      const allPosts = response.data.items || [];
-      const filteredPosts = allPosts.filter(post => {
-        const title = post.title?.toLowerCase() || '';
-        const content = post.content?.toLowerCase() || '';
-        const searchTerm = query.toLowerCase();
-        return title.includes(searchTerm) || content.includes(searchTerm);
-      });
-      
+
+      // The search endpoint does not support maxResults directly,
+      // so we truncate client-side if needed
+      const items = response.data.items || [];
+      const limit = maxResults || config.blogger.maxResults;
+
       return {
         kind: response.data.kind,
-        items: filteredPosts
+        items: items.slice(0, limit)
       };
     } catch (error) {
       console.error(`Erreur lors de la recherche de posts dans le blog ${blogId}:`, error);
@@ -155,12 +202,14 @@ export class BloggerService {
   }
 
   /**
-   * Crée un nouveau post dans un blog
-   * @param blogId ID du blog
-   * @param postData Données du post à créer
-   * @returns Post créé
+   * Creates a new post in a blog.
+   * Requires OAuth2.
+   * @param blogId Blog ID
+   * @param postData Post data to create
+   * @returns Created post
    */
   async createPost(blogId: string, postData: Partial<BloggerPost>): Promise<blogger_v3.Schema$Post> {
+    this.requireOAuth2('create_post');
     try {
       const response = await this.blogger.posts.insert({
         blogId,
@@ -174,13 +223,15 @@ export class BloggerService {
   }
 
   /**
-   * Met à jour un post existant
-   * @param blogId ID du blog
-   * @param postId ID du post
-   * @param postData Données du post à mettre à jour
-   * @returns Post mis à jour
+   * Updates an existing post.
+   * Requires OAuth2.
+   * @param blogId Blog ID
+   * @param postId Post ID
+   * @param postData Post data to update
+   * @returns Updated post
    */
   async updatePost(blogId: string, postId: string, postData: Partial<BloggerPost>): Promise<blogger_v3.Schema$Post> {
+    this.requireOAuth2('update_post');
     try {
       // Convertir les types pour éviter les erreurs de compilation
       const requestBody: blogger_v3.Schema$Post = {
@@ -202,12 +253,14 @@ export class BloggerService {
   }
 
   /**
-   * Supprime un post
-   * @param blogId ID du blog
-   * @param postId ID du post
-   * @returns Statut de la suppression
+   * Deletes a post.
+   * Requires OAuth2.
+   * @param blogId Blog ID
+   * @param postId Post ID
+   * @returns Deletion status
    */
   async deletePost(blogId: string, postId: string): Promise<void> {
+    this.requireOAuth2('delete_post');
     try {
       await this.blogger.posts.delete({
         blogId,

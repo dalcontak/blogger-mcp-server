@@ -56,6 +56,13 @@ export type ServerMode =
   | { type: 'stdio' }
   | { type: 'http', host: string, port: number };
 
+// OAuth2 configuration type
+export interface OAuth2Config {
+  clientId?: string;
+  clientSecret?: string;
+  refreshToken?: string;
+}
+
 // Type pour la configuration du serveur
 export interface ServerConfig {
   mode: ServerMode;
@@ -64,6 +71,7 @@ export interface ServerConfig {
     maxResults: number;
     timeout: number;
   };
+  oauth2: OAuth2Config;
   logging: {
     level: string;
   };

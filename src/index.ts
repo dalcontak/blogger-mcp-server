@@ -13,10 +13,23 @@ async function main() {
   try {
     console.log('Démarrage du serveur MCP pour Blogger...');
     
-    // Vérifier que la clé API est configurée
-    if (!config.blogger.apiKey) {
-      console.error('ERREUR: La variable d\'environnement BLOGGER_API_KEY est requise.');
+    // Verify that at least one authentication method is configured
+    const hasOAuth2 = !!(config.oauth2.clientId && config.oauth2.clientSecret && config.oauth2.refreshToken);
+    const hasApiKey = !!config.blogger.apiKey;
+    
+    if (!hasOAuth2 && !hasApiKey) {
+      console.error(
+        'ERROR: No authentication configured.\n' +
+        'Set BLOGGER_API_KEY (read-only) or\n' +
+        'GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + GOOGLE_REFRESH_TOKEN (full access).'
+      );
       process.exit(1);
+    }
+    
+    if (hasOAuth2) {
+      console.log('Authentication mode: OAuth2 (full access)');
+    } else {
+      console.log('Authentication mode: API Key (read-only)');
     }
     
     // Initialiser le service Blogger
@@ -30,6 +43,7 @@ async function main() {
     const serverConfig = {
       mode: serverMode,
       blogger: config.blogger,
+      oauth2: config.oauth2,
       logging: config.logging
     };
     
