@@ -10,14 +10,16 @@ IMPORTANT: npm classic tokens are deprecated (revoked Nov 19, 2025). Fine-graine
 
 #### Step 1: Configure GitHub Actions as Trusted Publisher
 
-1. Go to: https://www.npmjs.com/settings/trusted-publishing
-2. Click on **"GitHub Actions"**
-3. Click on **"Set up connection"**
-4. Fill in:
-   - **Organization or user**: `dalcontak` (or your GitHub username)
+The correct navigation is:
+1. Go to https://www.npmjs.com/package/@dalcontak/blogger-mcp-server
+2. Click on **"Settings"** tab
+3. Find the **"Trusted Publishers"** section
+4. Click on **"GitHub Actions"** (or "Set up connection" button)
+5. Fill in:
+   - **Organization or user**: `dalcontak`
    - **Repository**: `dalcontak/blogger-mcp-server`
-   - **Workflow filename**: `publish.yml` (name of the workflow file)
-5. Click **"Set up connection"**
+   - **Workflow filename**: `publish.yml` (name of the workflow file, NOT the full path)
+6. Click **"Set up connection"**
 
 Optional but recommended:
 - ✅ **Require two-factor authentication**
