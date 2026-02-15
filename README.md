@@ -38,7 +38,7 @@ npm run build
 if error install : 
 
 ```bash
-npm install --save-dev @types/express @types/socket.io
+npm install --save-dev @types/express
 ```
 ## Configuration
 
@@ -152,14 +152,13 @@ Le serveur MCP pour Blogger est composé de plusieurs modules :
 * `bloggerService.ts` : Service d'interaction avec l'API Blogger
 * `config.ts` : Configuration du serveur
 * `types.ts` : Définition des types et interfaces
-* `mcp-sdk-mock.ts` : Implémentation simplifiée du SDK MCP pour éviter les problèmes de dépendances
 
 ## Limitations connues
 
 * **Création de blogs** : L'API Blogger de Google ne permet pas de créer de nouveaux blogs via API. Les blogs doivent être créés manuellement via l'interface web de Blogger.
-* **Recherche de posts** : L'API Blogger ne fournit pas d'endpoint direct pour la recherche. Cette fonctionnalité est implémentée côté client en récupérant les posts puis en les filtrant.
+* **Recherche de posts** : La recherche utilise l'endpoint natif `posts/search?q=` de l'API Blogger v3.
 * **Gestion des labels** : L'API Blogger ne fournit pas d'endpoints directs pour la gestion des labels. Cette fonctionnalité est implémentée en extrayant les labels des posts.
-* **Authentification** : Ce serveur utilise uniquement l'authentification par clé API, ce qui limite l'accès aux blogs publics ou aux blogs pour lesquels vous avez explicitement configuré l'accès.
+* **Authentification** : Le serveur supporte l'authentification par clé API (lecture seule, blogs publics) et OAuth2 (accès complet en lecture/écriture). OAuth2 est requis pour `list_blogs`, `create_post`, `update_post`, `delete_post`.
 
 ## Contribution
 
@@ -168,4 +167,3 @@ Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou un
 ## Licence
 
 Ce projet est sous licence MIT.
->>>>>>> cf72ca4 (Ajout des nouvelles fonctionnalités)

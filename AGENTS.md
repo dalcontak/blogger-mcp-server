@@ -46,7 +46,6 @@ src/
   bloggerService.ts   # Google Blogger API wrapper (BloggerService class)
   config.ts           # Environment-based configuration object
   types.ts            # Shared interfaces and type definitions
-  mcp-sdk-mock.ts     # Fallback MCP SDK mock (currently unused)
   ui-manager.ts       # Express + Socket.IO web dashboard
 public/               # Static web UI assets (HTML/JS/CSS)
 dist/                 # Compiled output (committed to repo)
@@ -146,11 +145,7 @@ dist/                 # Compiled output (committed to repo)
 
 ## Known Issues / Gotchas
 
-- `express` is imported in `ui-manager.ts` but is NOT listed in `package.json` dependencies
-  (only `@types/express` is in devDependencies)
-- `mcp-sdk-mock.ts` appears to be unused dead code
 - `dist/` directory is committed to the repo -- rebuild before committing if you change source
-- No `.gitignore` file exists
 - README.md has an unresolved merge conflict marker at line 171
 - HTTP mode in `index.ts` has a manual tool-routing switch that duplicates `server.ts` logic
 
