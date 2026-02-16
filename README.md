@@ -1,169 +1,264 @@
-# blogger-mcp-server
-=======
-# Serveur MCP pour Blogger
+# Blogger MCP Server
 
-Un serveur MCP (Model Context Protocol) qui permet aux modèles d'intelligence artificielle comme Claude d'interagir directement avec l'API Blogger de Google.
+MCP (Model Context Protocol) server for Google's Blogger API. Allows AI models like Claude to interact with Blogger blogs.
 
-## À propos
+## Features
 
-Ce projet implémente un serveur compatible avec le protocole MCP (Model Context Protocol) pour l'API Blogger de Google. Il permet aux modèles d'IA comme Claude d'interagir avec les blogs Blogger pour :
+- **List and retrieve blogs** — Get blog details by ID or URL
+- **Posts management** — List, search, retrieve, create, update, delete posts
+- **Labels management** — List and retrieve labels
+- **Dual authentication**:
+  - **API Key** (read-only) — Access public blogs
+  - **OAuth2** (full access) — Create, update, delete posts, list your blogs
+- **Native search** — Uses Blogger's `posts/search` endpoint (not client-side filtering)
+- **Blog discovery** — `get_blog_by_url` tool to find blog ID from URL
+- **Optional Web UI** — Express + Socket.IO dashboard (enable with `UI_PORT`)
 
-* Lister et récupérer des blogs
-* Lister, rechercher, récupérer, créer, mettre à jour et supprimer des posts
-* Lister et récupérer des labels
-
-> **Note importante** : L'API Blogger de Google ne permet pas de créer de nouveaux blogs via API. Cette limitation est documentée par Google. Les blogs doivent être créés manuellement via l'interface web de Blogger.
-
-## Prérequis
-
-* Node.js (version 16 ou supérieure)
-* Une clé API Blogger de Google
+> **Note:** The Blogger API does not allow creating new blogs. Blogs must be created manually via the Blogger web interface.
 
 ## Installation
 
-### Installation depuis npm
+### From npm
 
 ```bash
-npm install -g @mcproadev/blogger-mcp-server
+npm install -g @dalcontak/blogger-mcp-server
 ```
 
-### Installation depuis le code source
+### From source
 
 ```bash
-git clone https://github.com/niyonabil/blogger-mcp-server.git
+git clone https://github.com/dalcontak/blogger-mcp-server.git
 cd blogger-mcp-server
 npm install
 npm run build
 ```
-if error install : 
+
+## Authentication
+
+### Option 1: API Key (Read-only)
+
+Access public blogs only.
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create/select a project or existing one
+3. Enable the **Blogger API v3**
+4. Create an **API Key**
+5. Set the environment variable:
 
 ```bash
-npm install --save-dev @types/express
+export BLOGGER_API_KEY=your_api_key_here
 ```
-## Configuration
 
-### Obtenir une clé API Blogger
+Works for: `get_blog`, `get_blog_by_url`, `list_posts`, `get_post`, `search_posts`, `list_labels`, `get_label`
 
-1. Accédez à la [Console Google Cloud](https://console.cloud.google.com/)
-2. Créez un nouveau projet ou sélectionnez un projet existant
-3. Activez l'API Blogger v3
-4. Créez une clé API
-5. Notez cette clé pour l'utiliser dans la configuration
+### Option 2: OAuth2 (Full Access)
 
-### Configuration du serveur MCP
+Required for: `list_blogs`, `create_post`, `update_post`, `delete_post`
 
-Créez un fichier de configuration pour votre client MCP. Voici un exemple pour Claude Desktop :
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Navigate to **Credentials** > **Create Credentials**
+3. Select **OAuth client ID**
+4. Application type: **Web application** or **Desktop app**
+5. Name: Your app name
+6. Authorized redirect URI: `http://localhost` (or your actual redirect)
+7. Scopes: Select **`https://www.googleapis.com/auth/blogger`**
+8. Create credentials and note the **Client ID** and **Client Secret**
+
+To obtain a refresh token (one-time setup):
+- Use the [OAuth Playground](https://developers.google.com/oauthplayground/)
+- Select **Blogger API v3**
+- Choose `https://www.googleapis.com/auth/blogger` scope
+- Authorize and copy the **refresh token**
+
+Set environment variables:
+
+```bash
+export GOOGLE_CLIENT_ID=your_client_id
+export GOOGLE_CLIENT_SECRET=your_client_secret
+export GOOGLE_REFRESH_TOKEN=your_refresh_token
+```
+
+> **Note:** If both authentication methods are configured, OAuth2 is used (it covers all operations).
+
+## Usage
+
+### Local Development
+
+```bash
+# Using npm package
+npm start
+
+# Or from source (after build)
+node dist/index.js
+
+# Development mode with ts-node
+npm run dev
+```
+
+### With MCP Client (Claude Desktop)
+
+Create or edit your Claude Desktop config file:
+
+**Linux:** `~/.config/Claude/claude_desktop_config.json`  
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`  
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "blogger": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@mcproadev/blogger-mcp-server"
-      ],
+      "command": "node",
+      "args": ["/home/dalcon/dev/ai/blogger-mcp-server/dist/index.js"],
       "env": {
-        "BLOGGER_API_KEY": "VOTRE_CLE_API_ICI"
+        "BLOGGER_API_KEY": "your_api_key_here"
       }
     }
   }
 }
 ```
 
-Remplacez `VOTRE_CLE_API_ICI` par la clé API que vous avez obtenue.
+Replace `/home/dalcon/dev/ai/blogger-mcp-server/dist/index.js` with your actual path, and set your API key or OAuth2 credentials.
 
-## Utilisation
+### Example Commands
 
-### Démarrage local
+```json
+// List all your blogs (requires OAuth2)
+{"tool": "list_blogs", "params": {}}
 
-Le projet inclut deux scripts pour faciliter le démarrage du serveur :
+// Get blog details by ID
+{"tool": "get_blog", "params": {"blogId": "123456789"}}
 
-#### Mode développement
+// Find blog ID from URL (useful when you don't know the ID)
+{"tool": "get_blog_by_url", "params": {"url": "https://yourblog.blogspot.com"}}
 
-```bash
-export BLOGGER_API_KEY=votre_cle_api
-./start-dev.sh
+// List posts
+{"tool": "list_posts", "params": {"blogId": "123456789", "maxResults": 10}}
+
+// Search posts
+{"tool": "search_posts", "params": {"blogId": "123456789", "query": "technology"}}
+
+// Create a new post (requires OAuth2)
+{"tool": "create_post", "params": {"blogId": "123456789", "title": "My Post", "content": "Content here", "labels": ["tech", "nodejs"]}}
+
+// Update a post (requires OAuth2)
+{"tool": "update_post", "params": {"blogId": "123456789", "postId": "789012", "title": "Updated Title"}}
+
+// Delete a post (requires OAuth2)
+{"tool": "delete_post", "params": {"blogId": "123456789", "postId": "789012"}}
+
+// List labels
+{"tool": "list_labels", "params": {"blogId": "123456789"}}
+
+// Get label details
+{"tool": "get_label", "params": {"blogId": "123456789", "labelName": "technology"}}
 ```
 
-Ce script vérifie la présence de la clé API, installe les dépendances si nécessaire, compile le projet si nécessaire, puis démarre le serveur en mode développement.
+## Available Tools
 
-#### Mode production
+| Tool | Description | Auth Required |
+|-------|-------------|---------------|
+| `list_blogs` | Lists all your blogs | OAuth2 |
+| `get_blog` | Retrieves blog details by ID | None |
+| `get_blog_by_url` | Finds blog ID from URL | None |
+| `list_posts` | Lists posts from a blog | None |
+| `search_posts` | Searches posts (uses native API) | None |
+| `get_post` | Retrieves post details | None |
+| `create_post` | Creates a new post | OAuth2 |
+| `update_post` | Updates an existing post | OAuth2 |
+| `delete_post` | Deletes a post | OAuth2 |
+| `list_labels` | Lists all labels from a blog | None |
+| `get_label` | Retrieves label details | None |
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BLOGGER_API_KEY` | (optional) | Google Blogger API key (read-only) |
+| `GOOGLE_CLIENT_ID` | (optional) | OAuth2 client ID (for full access) |
+| `GOOGLE_CLIENT_SECRET` | (optional) | OAuth2 client secret |
+| `GOOGLE_REFRESH_TOKEN` | (optional) | OAuth2 refresh token |
+| `MCP_MODE` | `stdio` | Transport: `stdio` or `http` |
+| `MCP_HTTP_HOST` | `0.0.0.0` | HTTP host (HTTP mode) |
+| `MCP_HTTP_PORT` | `3000` | HTTP port (HTTP mode) |
+| `BLOGGER_MAX_RESULTS` | `10` | Max results per query |
+| `BLOGGER_API_TIMEOUT` | `30000` | API timeout (ms) |
+| `LOG_LEVEL` | `info` | Logging level |
+| `UI_PORT` | (disabled) | Web UI port (set to enable) |
+
+**At least one auth method is required** — Either API key OR OAuth2 credentials.
+
+## Project Structure
+
+```
+src/
+  index.ts            # Entry point, main() function, HTTP mode routing
+  server.ts           # MCP server tool registration (initMCPServer)
+  bloggerService.ts   # Google Blogger API wrapper (BloggerService class)
+  config.ts           # Environment-based configuration object
+  types.ts            # Shared interfaces and type definitions
+  ui-manager.ts       # Express + Socket.IO web dashboard
+  tests/              # Unit tests (Jest)
+  .github/workflows/ # GitHub Actions CI/CD
+public/               # Static web UI assets (HTML/JS/CSS)
+dist/                 # Compiled output
+```
+
+## Development
 
 ```bash
-export BLOGGER_API_KEY=votre_cle_api
+# Install dependencies
+npm install
+
+# Run development (stdio mode, auto-compiles with ts-node)
+npm run dev
+
+# Run in HTTP mode (useful for manual testing with curl)
+MCP_MODE=http BLOGGER_API_KEY=your_key npm run dev
+
+# Run tests
+npm test
+
+# Build for production
 npm run build
-./start-prod.sh
 ```
 
-Ce script vérifie la présence de la clé API et que le projet est compilé, puis démarre le serveur en mode production.
+## Deployment
 
-### Utilisation avec un client MCP
+### Vercel
 
-Une fois configuré, vous pouvez utiliser le serveur MCP pour Blogger avec n'importe quel client MCP compatible, comme Claude Desktop.
+The project includes `vercel.json` for Vercel deployment:
 
-Exemples de commandes :
+1. Install Vercel CLI: `npm install -g vercel`
+2. Login: `vercel login`
+3. Deploy: `vercel`
 
-* "Liste tous mes blogs Blogger"
-* "Crée un nouveau post sur mon blog avec l'ID 123456 avec le titre 'Mon nouveau post' et le contenu 'Voici le contenu de mon post'"
-* "Recherche des posts contenant le mot 'technologie' dans mon blog"
-* "Mets à jour le post avec l'ID 789012 pour changer son titre en 'Nouveau titre'"
+### Docker
 
-## Options de déploiement
+Build and run:
 
-### Déploiement sur Vercel
+```bash
+docker build -t blogger-mcp-server .
+docker run -p 3000:3000 -e BLOGGER_API_KEY=your_key blogger-mcp-server
+```
 
-Le projet inclut un fichier `vercel.json` pour faciliter le déploiement sur Vercel :
+### Other Platforms
 
-1. Créez un compte sur [Vercel](https://vercel.com/) si vous n'en avez pas déjà un
-2. Installez l'outil CLI Vercel : `npm install -g vercel`
-3. Connectez-vous à votre compte Vercel : `vercel login`
-4. Configurez votre variable d'environnement secrète : `vercel secrets add blogger_api_key "VOTRE_CLE_API_ICI"`
-5. Déployez le projet : `vercel`
+The server can be deployed to any Node.js-compatible platform (Heroku, AWS Lambda, Google Cloud Run, etc.).
 
-### Déploiement avec Docker
+## Release Process
 
-Le projet inclut un Dockerfile pour faciliter le déploiement dans un conteneur Docker :
+For publishing new versions to npm, see [RELEASE.md](./RELEASE.md).
 
-1. Construisez l'image Docker :
-   ```bash
-   docker build -t blogger-mcp-server .
-   ```
+## Contributing
 
-2. Exécutez le conteneur :
-   ```bash
-   docker run -p 3000:3000 -e BLOGGER_API_KEY=votre_cle_api blogger-mcp-server
-   ```
+Contributions are welcome! Feel free to open an issue or pull request.
 
-### Autres options de déploiement
+## License
 
-Le serveur peut également être déployé sur d'autres plateformes compatibles avec Node.js :
+MIT
 
-1. **Heroku** : Utilisez un Procfile et les variables d'environnement Heroku
-2. **AWS Lambda** : Utilisez un adaptateur comme Serverless Framework
-3. **Google Cloud Run** : Utilisez le Dockerfile inclus
+## Acknowledgments
 
-## Structure du projet
-
-Le serveur MCP pour Blogger est composé de plusieurs modules :
-
-* `index.ts` : Point d'entrée principal
-* `server.ts` : Configuration du serveur MCP
-* `bloggerService.ts` : Service d'interaction avec l'API Blogger
-* `config.ts` : Configuration du serveur
-* `types.ts` : Définition des types et interfaces
-
-## Limitations connues
-
-* **Création de blogs** : L'API Blogger de Google ne permet pas de créer de nouveaux blogs via API. Les blogs doivent être créés manuellement via l'interface web de Blogger.
-* **Recherche de posts** : La recherche utilise l'endpoint natif `posts/search?q=` de l'API Blogger v3.
-* **Gestion des labels** : L'API Blogger ne fournit pas d'endpoints directs pour la gestion des labels. Cette fonctionnalité est implémentée en extrayant les labels des posts.
-* **Authentification** : Le serveur supporte l'authentification par clé API (lecture seule, blogs publics) et OAuth2 (accès complet en lecture/écriture). OAuth2 est requis pour `list_blogs`, `create_post`, `update_post`, `delete_post`.
-
-## Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou une pull request.
-
-## Licence
-
-Ce projet est sous licence MIT.
+- Built with [TypeScript](https://www.typescriptlang.org/)
+- Uses [googleapis](https://github.com/googleapis/google-api-nodejs-client) for Google APIs
+- MCP SDK by [Model Context Protocol](https://modelcontextprotocol.io/)
