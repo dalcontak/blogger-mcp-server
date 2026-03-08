@@ -3,6 +3,10 @@
   "version": "1.0.1",
   "private": false,
   "description": "MCP Server for Blogger API",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dalcontak/blogger-mcp-server.git"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
