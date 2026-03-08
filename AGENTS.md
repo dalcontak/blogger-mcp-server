@@ -6,7 +6,7 @@ MCP (Model Context Protocol) server for Google's Blogger API. Allows AI models t
 interact with Blogger blogs via stdio or HTTP transport. Includes an optional web dashboard
 (Express + Socket.IO) on a separate port when `UI_PORT` is set. Written in TypeScript, targeting Node.js 20.
 
-Package: `@mcproadev/blogger-mcp-server` (v1.0.4)
+Package: `@dalcontak/blogger-mcp-server` (v1.0.4)
 
 ## Build / Run / Test Commands
 
@@ -47,6 +47,7 @@ src/
   config.ts           # Environment-based configuration object
   types.ts            # Shared interfaces and type definitions
   ui-manager.ts       # Express + Socket.IO web dashboard
+  *.test.ts           # Unit tests (Jest) alongside source files
 public/               # Static web UI assets (HTML/JS/CSS)
 dist/                 # Compiled output (committed to repo)
 ```
@@ -146,7 +147,6 @@ dist/                 # Compiled output (committed to repo)
 ## Known Issues / Gotchas
 
 - `dist/` directory is committed to the repo -- rebuild before committing if you change source
-- README.md has an unresolved merge conflict marker at line 171
 - HTTP mode in `index.ts` has a manual tool-routing switch that duplicates `server.ts` logic
 
 ## Deployment
