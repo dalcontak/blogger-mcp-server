@@ -108,7 +108,7 @@ Create or edit your Claude Desktop config file:
   "mcpServers": {
     "blogger": {
       "command": "node",
-      "args": ["/home/dalcon/dev/ai/blogger-mcp-server/dist/index.js"],
+      "args": ["./dist/index.js"],
       "env": {
         "BLOGGER_API_KEY": "your_api_key_here"
       }
@@ -197,7 +197,7 @@ src/
   config.ts           # Environment-based configuration object
   types.ts            # Shared interfaces and type definitions
   ui-manager.ts       # Express + Socket.IO web dashboard
-  tests/              # Unit tests (Jest)
+  *.test.ts           # Unit tests (Jest) alongside source files
   .github/workflows/ # GitHub Actions CI/CD
 public/               # Static web UI assets (HTML/JS/CSS)
 dist/                 # Compiled output
