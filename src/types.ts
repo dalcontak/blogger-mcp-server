@@ -1,79 +1,32 @@
 import { z } from 'zod';
+import { blogger_v3 } from 'googleapis';
 
-/**
- * Types used in the MCP server for Blogger
- */
+export interface ToolResult {
+  content: Array<{ type: string; text: string }>;
+  isError?: boolean;
+}
 
-// Tool definition type
-export interface ToolDefinition {
+export interface ToolDefinition<T extends z.ZodRawShape = z.ZodRawShape> {
   name: string;
   description: string;
-  args: z.ZodType<any>;
-  handler: (args: any, extra?: any) => Promise<any>;
+  args: z.ZodObject<T>;
+  handler: (args: z.infer<z.ZodObject<T>>) => Promise<ToolResult>;
 }
 
-// Blog type
-export interface BloggerBlog {
-  id: string;
-  name: string;
-  description?: string;
-  url: string;
-  status?: string;
-  posts?: BloggerPost[];
-  labels?: BloggerLabel[];
-}
+export type BloggerBlog = blogger_v3.Schema$Blog;
+export type BloggerPost = blogger_v3.Schema$Post;
+export type BloggerLabel = { name: string };
 
-// Post type
-export interface BloggerPost {
-  id: string;
-  blogId: string;
-  title: string;
-  content: string;
-  url?: string;
-  published?: string;
-  updated?: string;
-  author?: {
-    id: string;
-    displayName: string;
-    url: string;
-    image?: {
-      url: string;
-    };
-  };
-  labels?: string[];
-}
-
-// Label type
-export interface BloggerLabel {
-  id?: string;
-  name: string;
-}
-
-// Search parameters type
-export interface SearchParams {
-  query: string;
-  maxResults?: number;
-}
-
-// Pagination parameters type
-export interface PaginationParams {
-  pageToken?: string;
-  maxResults?: number;
-}
-
-// Server operating modes type
 export type ServerMode =
   | { type: 'stdio' }
-  | { type: 'http', host: string, port: number };
+  | { type: 'http'; host: string; port: number };
 
-// OAuth2 configuration type
 export interface OAuth2Config {
   clientId?: string;
   clientSecret?: string;
   refreshToken?: string;
 }
 
-// Server configuration type
 export interface ServerConfig {
   mode: ServerMode;
   blogger: {
@@ -87,7 +40,6 @@ export interface ServerConfig {
   };
 }
 
-// UI types
 export interface ServerStatus {
   running: boolean;
   mode: string;

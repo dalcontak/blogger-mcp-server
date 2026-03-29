@@ -1,29 +1,18 @@
-/**
- * Tests for config.ts
- *
- * config.ts reads process.env at module load time, so we must
- * set env vars BEFORE importing. We use jest.isolateModules()
- * to get a fresh module for each test.
- */
-
-// Helper to load config with specific env vars
 function loadConfig(env: Record<string, string>) {
-  // Clean all relevant env vars first
   const keys = [
     'MCP_MODE', 'MCP_HTTP_HOST', 'MCP_HTTP_PORT',
     'BLOGGER_API_KEY', 'BLOGGER_MAX_RESULTS', 'BLOGGER_API_TIMEOUT',
     'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REFRESH_TOKEN',
-    'LOG_LEVEL'
+    'LOG_LEVEL', 'UI_PORT'
   ];
   for (const key of keys) {
     delete process.env[key];
   }
-  // Set requested env vars
   for (const [key, value] of Object.entries(env)) {
     process.env[key] = value;
   }
 
-  // Force fresh import
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let config: any;
   jest.isolateModules(() => {
     config = require('./config').config;
@@ -51,6 +40,7 @@ describe('config.ts', () => {
       expect(config.oauth2.clientSecret).toBeUndefined();
       expect(config.oauth2.refreshToken).toBeUndefined();
       expect(config.logging.level).toBe('info');
+      expect(config.ui.port).toBe(0);
     });
   });
 
@@ -58,11 +48,6 @@ describe('config.ts', () => {
     it('should read MCP_MODE from env', () => {
       const config = loadConfig({ MCP_MODE: 'http' });
       expect(config.mode).toBe('http');
-    });
-
-    it('should accept arbitrary mode values (no validation at config level)', () => {
-      const config = loadConfig({ MCP_MODE: 'invalid' });
-      expect(config.mode).toBe('invalid');
     });
   });
 
@@ -72,10 +57,22 @@ describe('config.ts', () => {
       expect(config.http.host).toBe('127.0.0.1');
       expect(config.http.port).toBe(8080);
     });
+  });
 
-    it('should return NaN for non-numeric port', () => {
+  describe('safeInt (NaN protection)', () => {
+    it('should return default for non-numeric port', () => {
       const config = loadConfig({ MCP_HTTP_PORT: 'abc' });
-      expect(config.http.port).toBeNaN();
+      expect(config.http.port).toBe(3000);
+    });
+
+    it('should return default for non-numeric maxResults', () => {
+      const config = loadConfig({ BLOGGER_MAX_RESULTS: 'notanumber' });
+      expect(config.blogger.maxResults).toBe(10);
+    });
+
+    it('should return default for non-numeric timeout', () => {
+      const config = loadConfig({ BLOGGER_API_TIMEOUT: 'xyz' });
+      expect(config.blogger.timeout).toBe(30000);
     });
   });
 
@@ -116,6 +113,23 @@ describe('config.ts', () => {
     it('should read LOG_LEVEL from env', () => {
       const config = loadConfig({ LOG_LEVEL: 'debug' });
       expect(config.logging.level).toBe('debug');
+    });
+  });
+
+  describe('ui', () => {
+    it('should default to port 0 (disabled)', () => {
+      const config = loadConfig({});
+      expect(config.ui.port).toBe(0);
+    });
+
+    it('should read UI_PORT from env', () => {
+      const config = loadConfig({ UI_PORT: '4000' });
+      expect(config.ui.port).toBe(4000);
+    });
+
+    it('should return default 0 for non-numeric UI_PORT', () => {
+      const config = loadConfig({ UI_PORT: 'abc' });
+      expect(config.ui.port).toBe(0);
     });
   });
 });

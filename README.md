@@ -37,48 +37,54 @@ npm run build
 
 ### Option 1: API Key (Read-only)
 
-Access public blogs only.
+Access public blogs only. Useful if you only need to read data.
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create/select a project or existing one
-3. Enable the **Blogger API v3**
-4. Create an **API Key**
-5. Set the environment variable:
-
-```bash
-export BLOGGER_API_KEY=your_api_key_here
-```
-
-Works for: `get_blog`, `get_blog_by_url`, `list_posts`, `get_post`, `search_posts`, `list_labels`, `get_label`
+2. Create/select a project, then enable the **Blogger API v3**.
+3. Create an **API Key** under Credentials.
+4. Set the environment variable: `export BLOGGER_API_KEY=your_api_key_here`
 
 ### Option 2: OAuth2 (Full Access)
 
-Required for: `list_blogs`, `create_post`, `update_post`, `delete_post`
+Required to create, update, delete posts, and list your own blogs. 
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Navigate to **Credentials** > **Create Credentials**
-3. Select **OAuth client ID**
-4. Application type: **Web application** or **Desktop app**
-5. Name: Your app name
-6. Authorized redirect URI: `http://localhost` (or your actual redirect)
-7. Scopes: Select **`https://www.googleapis.com/auth/blogger`**
-8. Create credentials and note the **Client ID** and **Client Secret**
+**Need a step-by-step visual guide?**  
+🔗 [**Read the complete tutorial on setting up OAuth2 for Blogger MCP here**](https://dalcontk.blogspot.com/2026/03/guia-paso-paso-como-configurar.html)  
+*(Note: This guide is written in Spanish. Feel free to use Google Translate if you need it in another language).*
 
-To obtain a refresh token (one-time setup):
-- Use the [OAuth Playground](https://developers.google.com/oauthplayground/)
-- Select **Blogger API v3**
-- Choose `https://www.googleapis.com/auth/blogger` scope
-- Authorize and copy the **refresh token**
+**Step 1: Configure OAuth Consent**
+1. In [Google Cloud Console](https://console.cloud.google.com/), go to **Google Auth Platform** > **Overview**.
+2. Under **Audience**, add your Google account as a Test User.
+3. Under **Data Access** (Scopes), add: `https://www.googleapis.com/auth/blogger`
 
-Set environment variables:
+**Step 2: Create Web Credentials**
+1. Go to **Credentials** > **Create Credentials** > **OAuth client ID**.
+2. Application type: Select **Web application** *(do not use Desktop app)*.
+3. Name: Your app name.
+4. Authorized redirect URIs: Add exactly `https://developers.google.com/oauthplayground`
+5. Click Create and copy your **Client ID** and **Client Secret**.
 
-```bash
-export GOOGLE_CLIENT_ID=your_client_id
-export GOOGLE_CLIENT_SECRET=your_client_secret
-export GOOGLE_REFRESH_TOKEN=your_refresh_token
+**Step 3: Get a Refresh Token**
+1. Go to the [Google OAuth 2.0 Playground](https://developers.google.com/oauthplayground/).
+2. Click the **Gear icon** (top right) ⚙️ > check **Use your own OAuth credentials**.
+3. Paste your **Client ID** and **Client Secret**, then close the settings panel.
+4. In Step 1 (left panel), scroll to **Blogger API v3**, select `https://www.googleapis.com/auth/blogger`, and click **Authorize APIs**.
+5. Log in with your test Google account and grant permissions.
+6. In Step 2, click **Exchange authorization code for tokens**.
+7. Copy the generated **Refresh token**.
+
+**Step 4: Set Environment Variables**
+Configure your MCP client (like Claude Desktop or OpenCode) with:
+
+```json
+"env": {
+  "GOOGLE_CLIENT_ID": "your_client_id_here",
+  "GOOGLE_CLIENT_SECRET": "your_client_secret_here",
+  "GOOGLE_REFRESH_TOKEN": "1//your_refresh_token_here"
+}
 ```
 
-> **Note:** If both authentication methods are configured, OAuth2 is used (it covers all operations).
+> **Note:** If both API Key and OAuth2 are configured, OAuth2 is used.
 
 ## Usage
 

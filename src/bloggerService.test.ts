@@ -361,7 +361,11 @@ describe('write operations (OAuth2)', () => {
       const result = await service.createPost('blog1', newPost);
       expect(mockPostsInsert).toHaveBeenCalledWith({
         blogId: 'blog1',
-        requestBody: newPost
+        requestBody: {
+          title: 'New',
+          content: '<p>Hello</p>',
+          labels: ['test']
+        }
       });
       expect(result.title).toBe('New');
     });
