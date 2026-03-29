@@ -1,6 +1,6 @@
 {
   "name": "@dalcontak/blogger-mcp-server",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": false,
   "description": "MCP Server for Blogger API",
   "repository": {
@@ -43,5 +43,8 @@
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
+  },
+  "bin": {
+    "blogger-mcp-server": "./dist/index.js"
   }
 }

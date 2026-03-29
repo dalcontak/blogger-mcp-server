@@ -113,8 +113,8 @@ Create or edit your Claude Desktop config file:
 {
   "mcpServers": {
     "blogger": {
-      "command": "node",
-      "args": ["./dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "@dalcontak/blogger-mcp-server@latest"],
       "env": {
         "BLOGGER_API_KEY": "your_api_key_here"
       }
@@ -123,7 +123,7 @@ Create or edit your Claude Desktop config file:
 }
 ```
 
-Replace `/home/dalcon/dev/ai/blogger-mcp-server/dist/index.js` with your actual path, and set your API key or OAuth2 credentials.
+Replace `your_api_key_here` with your API key or OAuth2 credentials.
 
 ### Example Commands
 
