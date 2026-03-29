@@ -6,7 +6,7 @@ on:
       - 'release/**'
 
 permissions:
-  contents: read
+  contents: write # Needed for creating GitHub Releases and Tags
   id-token: write
 
 jobs:
@@ -35,3 +35,32 @@ jobs:
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Extract version from package.json
+        id: package-version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="v${{ steps.package-version.outputs.version }}"
+          
+          # gh release create will automatically create the tag if it doesn't exist
+          # --generate-notes builds an automated changelog from commit history
+          gh release create "$VERSION" \
+            --title "Release $VERSION" \
+            --generate-notes \
+            --notes "### 📦 Installation
+          Available on npm: [npmjs.com/package/@dalcontak/blogger-mcp-server](https://www.npmjs.com/package/@dalcontak/blogger-mcp-server)
+          
+          You can run the server directly without installing it using \`npx\`:
+          \`\`\`bash
+          npx -y @dalcontak/blogger-mcp-server
+          \`\`\`
+          
+          Or install it globally:
+          \`\`\`bash
+          npm install -g @dalcontak/blogger-mcp-server
+          \`\`\`" \
+            --target $GITHUB_SHA
